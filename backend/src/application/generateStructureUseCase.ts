@@ -2,7 +2,9 @@ import { inject, injectable } from "inversify";
 import * as path from "node:path";
 import type {
   Config,
+  CopyEntry,
   ErrorRecord,
+  MissingResource,
   RunOptions,
   RunResult,
   TreeNode,
@@ -20,6 +22,8 @@ function emptyResult(): RunResult {
     createdDirectories: [],
     copiedFiles: [],
     skippedFiles: [],
+    overwrittenFiles: [],
+    missingResources: [],
     errors: [],
   };
 }
@@ -29,6 +33,15 @@ function normalizeOptions(options?: RunOptions): Required<RunOptions> {
     skipIfExists: options?.skipIfExists ?? true,
     overwrite: options?.overwrite ?? false,
   };
+}
+
+function isErrnoException(err: unknown): err is NodeJS.ErrnoException {
+  return (
+    !!err &&
+    typeof err === "object" &&
+    "code" in err &&
+    typeof (err as { code?: unknown }).code === "string"
+  );
 }
 
 @injectable()
@@ -50,8 +63,11 @@ export class GenerateStructureUseCase implements IGenerateStructureUseCase {
     const workspace = path.normalize(config.workspace.replace(/[/\\]+$/, ""));
 
     await this.ensureWorkspace(workspace, result);
-    for (const node of config.structure) {
-      await this.walk(node, workspace, result, opts);
+    for (let i = 0; i < config.structure.length; i++) {
+      const node = config.structure[i];
+      if (node) {
+        await this.walk(node, workspace, result, opts, `structure[${i}]`);
+      }
     }
 
     return result;
@@ -71,6 +87,7 @@ export class GenerateStructureUseCase implements IGenerateStructureUseCase {
     basePath: string,
     result: RunResult,
     options: Required<RunOptions>,
+    nodePath: string,
   ): Promise<void> {
     if (node.type === "category") {
       const dirPath = path.join(basePath, node.name);
@@ -78,11 +95,14 @@ export class GenerateStructureUseCase implements IGenerateStructureUseCase {
         await this.fileSystem.mkdirp(dirPath);
         result.createdDirectories.push(dirPath);
       } catch (e) {
-        result.errors.push(this.toErrorRecord(dirPath, e));
+        result.errors.push(this.toErrorRecord(dirPath, e, { nodePath }));
         return;
       }
-      for (const child of node.children) {
-        await this.walk(child, dirPath, result, options);
+      for (let i = 0; i < node.children.length; i++) {
+        const child = node.children[i];
+        if (child) {
+          await this.walk(child, dirPath, result, options, `${nodePath}.children[${i}]`);
+        }
       }
       return;
     }
@@ -90,31 +110,51 @@ export class GenerateStructureUseCase implements IGenerateStructureUseCase {
     // material
     const src = node.resource;
     const dst = path.join(basePath, node.name);
+    const exists = await this.fileSystem.exists(dst);
 
     if (options.overwrite) {
-      await this.copyOne(src, dst, result);
+      await this.copyOne(src, dst, result, nodePath, exists);
       return;
     }
-    if (options.skipIfExists) {
-      const exists = await this.fileSystem.exists(dst);
-      if (exists) {
-        result.skippedFiles.push({ src, dst, reason: "目标文件已存在" });
-        return;
-      }
+    if (options.skipIfExists && exists) {
+      result.skippedFiles.push({ src, dst, reason: "目标文件已存在" });
+      return;
     }
-    await this.copyOne(src, dst, result);
+    await this.copyOne(src, dst, result, nodePath, false);
   }
 
   private async copyOne(
     src: string,
     dst: string,
     result: RunResult,
+    nodePath: string,
+    overwriting: boolean,
   ): Promise<void> {
     try {
       await this.fileSystem.copyFile(src, dst);
-      result.copiedFiles.push({ src, dst });
+      const entry: CopyEntry = { src, dst };
+      if (overwriting) {
+        result.overwrittenFiles.push(entry);
+      } else {
+        result.copiedFiles.push(entry);
+      }
     } catch (e) {
-      result.errors.push(this.toErrorRecord(dst, e, { src, dst }));
+      if (isErrnoException(e) && e.code === "ENOENT") {
+        const missing: MissingResource = {
+          resource: src,
+          reason: "not_found",
+          nodePath,
+        };
+        result.missingResources.push(missing);
+        result.errors.push({
+          code: "ResourceNotFoundError",
+          message: `资源文件不存在：${src}`,
+          nodePath,
+          details: { src, dst },
+        });
+        return;
+      }
+      result.errors.push(this.toErrorRecord(dst, e, { src, dst, nodePath }));
     }
   }
 
