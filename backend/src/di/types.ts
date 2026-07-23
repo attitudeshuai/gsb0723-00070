@@ -4,5 +4,7 @@ export const DI_TYPES = {
   NodeValidator: Symbol.for("NodeValidator"),
   GenerateStructureUseCase: Symbol.for("GenerateStructureUseCase"),
   RunnerService: Symbol.for("RunnerService"),
-};
-
+  StructureChecker: Symbol.for("StructureChecker"),
+  OutputFormatter: Symbol.for("OutputFormatter"),
+  ReportRenderer: Symbol.for("ReportRenderer"),
+} as const;

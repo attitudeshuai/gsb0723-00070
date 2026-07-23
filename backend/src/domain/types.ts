@@ -50,10 +50,49 @@ export interface ErrorRecord {
   details?: Record<string, unknown>;
 }
 
+export interface MissingResource {
+  resource: string;
+  reason: "not_found" | "not_readable";
+  nodePath?: string;
+}
+
 export interface RunResult {
   createdDirectories: string[];
   copiedFiles: CopyEntry[];
   skippedFiles: SkipEntry[];
+  overwrittenFiles: CopyEntry[];
+  missingResources: MissingResource[];
   errors: ErrorRecord[];
 }
 
+export type RunMode = "preview" | "check" | "execute";
+
+export type OutputFormat = "text" | "json" | "markdown";
+
+export interface CheckResult {
+  validationErrors: ErrorRecord[];
+  missingResources: MissingResource[];
+}
+
+export interface CliOptions {
+  mode: RunMode;
+  format: OutputFormat;
+  skipIfExists: boolean;
+  overwrite: boolean;
+  reportPath?: string;
+}
+
+export interface ReportSummary {
+  mode: RunMode;
+  format: OutputFormat;
+  workspace: string;
+  createdDirectories: number;
+  copiedFiles: number;
+  skippedFiles: number;
+  overwrittenFiles: number;
+  missingResources: number;
+  errors: number;
+  elapsedMs: number;
+  errorList: ErrorRecord[];
+  missingList: MissingResource[];
+}

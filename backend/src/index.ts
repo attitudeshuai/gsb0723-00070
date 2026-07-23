@@ -2,5 +2,6 @@
 export * from "./domain/types";
 export * from "./application/runnerService";
 export * from "./application/generateStructureUseCase";
+export * from "./application/structureChecker";
 export * from "./di/container";
 

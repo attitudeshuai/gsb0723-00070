@@ -100,7 +100,7 @@ describe("GenerateStructureUseCase", () => {
     expect(result.copiedFiles).toHaveLength(0);
   });
 
-  test("overwrite 为 true 时应覆盖已存在文件", async () => {
+  test("overwrite 为 true 时应覆盖已存在文件并计入 overwrittenFiles", async () => {
     const fs = new InMemoryFileSystem();
     fs.files.set("/src/a", "new-content");
     const dstKey = path.join("/ws", "CategoryA", "a");
@@ -122,8 +122,35 @@ describe("GenerateStructureUseCase", () => {
     const result = await uc.run(cfg, { overwrite: true });
 
     expect(result.errors).toHaveLength(0);
-    expect(result.copiedFiles).toHaveLength(1);
+    expect(result.copiedFiles).toHaveLength(0);
+    expect(result.overwrittenFiles).toHaveLength(1);
+    expect(result.overwrittenFiles[0]).toEqual({ src: "/src/a", dst: dstKey });
     expect(fs.files.get(dstKey)).toBe("new-content");
+  });
+
+  test("源资源不存在时应记录 missingResources 与 ResourceNotFoundError 且不抛异常", async () => {
+    const fs = new InMemoryFileSystem();
+    const cfg: Config = {
+      workspace: "/ws",
+      structure: [
+        {
+          type: "category",
+          name: "CategoryA",
+          children: [{ type: "material", name: "a", resource: "/src/missing" }],
+        },
+      ],
+    };
+
+    const c = buildTestContainer(fs);
+    const uc = c.get<GenerateStructureUseCase>(DI_TYPES.GenerateStructureUseCase);
+    const result = await uc.run(cfg);
+
+    expect(result.copiedFiles).toHaveLength(0);
+    expect(result.missingResources).toHaveLength(1);
+    expect(result.missingResources[0]!.resource).toBe("/src/missing");
+    expect(result.missingResources[0]!.reason).toBe("not_found");
+    expect(result.errors.some((e) => e.code === "ResourceNotFoundError")).toBe(true);
+    expect(fs.files.get(path.join("/ws", "CategoryA", "a"))).toBeUndefined();
   });
 });
 
