@@ -1,0 +1,19 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: material-organizer-backend
+    # 挂载配置文件目录，方便在容器内访问配置文件
+    volumes:
+      - ./config:/app/config:ro
+    # 工作目录
+    working_dir: /app
+    # 保持容器运行，使用 tail -f /dev/null 让容器持续运行
+    # 启动后可通过以下方式进入容器执行命令：
+    # docker compose exec backend node dist/cli.js --config /app/config/example-config.json
+    # 或进入交互式终端：
+    # docker compose exec backend sh
+    command: ["tail", "-f", "/dev/null"]
+    # 容器保持运行，设置为不自动重启（除非手动重启）
+    restart: "unless-stopped"

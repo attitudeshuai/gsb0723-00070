@@ -1,0 +1,29 @@
+{
+  "description": "示例配置文件",
+  "workspace": "D:/workspace",
+  "structure": [
+    {
+      "type": "category",
+      "name": "CategoryA",
+      "children": [
+        {
+          "type": "category",
+          "name": "CategoryB",
+          "children": []
+        },
+        {
+          "type": "material",
+          "name": "c.tcad",
+          "description": "A sample material",
+          "resource": "d:/tcad/c.tcad"
+        },
+        {
+          "type": "material",
+          "name": "c.pdf",
+          "description": "A sample material",
+          "resource": "d:/pdf/c.pdf"
+        }
+      ]
+    }
+  ]
+}
