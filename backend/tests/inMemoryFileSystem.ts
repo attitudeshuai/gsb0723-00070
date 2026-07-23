@@ -19,5 +19,9 @@ export class InMemoryFileSystem implements IFileSystem {
     }
     this.files.set(dst, content);
   }
+
+  async isReadableFile(path: string): Promise<boolean> {
+    return this.files.has(path);
+  }
 }
 

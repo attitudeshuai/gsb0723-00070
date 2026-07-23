@@ -53,7 +53,13 @@ export interface ErrorRecord {
 export interface RunResult {
   createdDirectories: string[];
   copiedFiles: CopyEntry[];
+  overwrittenFiles: CopyEntry[];
   skippedFiles: SkipEntry[];
+  missingResources: string[];
   errors: ErrorRecord[];
 }
+
+export type OutputFormat = "text" | "json" | "markdown";
+
+export type CliMode = "preview" | "execute" | "check";
 
