@@ -19,7 +19,9 @@ function emptyResult(): RunResult {
   return {
     createdDirectories: [],
     copiedFiles: [],
+    overwrittenFiles: [],
     skippedFiles: [],
+    missingResources: [],
     errors: [],
   };
 }
@@ -91,28 +93,32 @@ export class GenerateStructureUseCase implements IGenerateStructureUseCase {
     const src = node.resource;
     const dst = path.join(basePath, node.name);
 
+    const dstExists = await this.fileSystem.exists(dst);
+
     if (options.overwrite) {
-      await this.copyOne(src, dst, result);
+      await this.copyOne(src, dst, result, dstExists);
       return;
     }
-    if (options.skipIfExists) {
-      const exists = await this.fileSystem.exists(dst);
-      if (exists) {
-        result.skippedFiles.push({ src, dst, reason: "目标文件已存在" });
-        return;
-      }
+    if (options.skipIfExists && dstExists) {
+      result.skippedFiles.push({ src, dst, reason: "目标文件已存在" });
+      return;
     }
-    await this.copyOne(src, dst, result);
+    await this.copyOne(src, dst, result, false);
   }
 
   private async copyOne(
     src: string,
     dst: string,
     result: RunResult,
+    existedBefore: boolean,
   ): Promise<void> {
     try {
       await this.fileSystem.copyFile(src, dst);
-      result.copiedFiles.push({ src, dst });
+      if (existedBefore) {
+        result.overwrittenFiles.push({ src, dst });
+      } else {
+        result.copiedFiles.push({ src, dst });
+      }
     } catch (e) {
       result.errors.push(this.toErrorRecord(dst, e, { src, dst }));
     }

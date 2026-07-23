@@ -21,5 +21,15 @@ export class NodeFsFileSystem implements IFileSystem {
   async copyFile(src: string, dst: string): Promise<void> {
     await fs.copyFile(src, dst);
   }
+
+  async isReadableFile(path: string): Promise<boolean> {
+    try {
+      await fs.access(path, fsConstants.R_OK);
+      const stat = await fs.stat(path);
+      return stat.isFile();
+    } catch {
+      return false;
+    }
+  }
 }
 

@@ -100,7 +100,7 @@ describe("GenerateStructureUseCase", () => {
     expect(result.copiedFiles).toHaveLength(0);
   });
 
-  test("overwrite 为 true 时应覆盖已存在文件", async () => {
+  test("overwrite 为 true 时应覆盖已存在文件并记录到 overwrittenFiles", async () => {
     const fs = new InMemoryFileSystem();
     fs.files.set("/src/a", "new-content");
     const dstKey = path.join("/ws", "CategoryA", "a");
@@ -122,8 +122,55 @@ describe("GenerateStructureUseCase", () => {
     const result = await uc.run(cfg, { overwrite: true });
 
     expect(result.errors).toHaveLength(0);
-    expect(result.copiedFiles).toHaveLength(1);
+    expect(result.copiedFiles).toHaveLength(0);
+    expect(result.overwrittenFiles).toHaveLength(1);
     expect(fs.files.get(dstKey)).toBe("new-content");
+  });
+
+  test("overwrite 为 true 但目标不存在时应记录到 copiedFiles", async () => {
+    const fs = new InMemoryFileSystem();
+    fs.files.set("/src/a", "content");
+
+    const cfg: Config = {
+      workspace: "/ws",
+      structure: [
+        {
+          type: "category",
+          name: "CategoryA",
+          children: [{ type: "material", name: "a", resource: "/src/a" }],
+        },
+      ],
+    };
+
+    const c = buildTestContainer(fs);
+    const uc = c.get<GenerateStructureUseCase>(DI_TYPES.GenerateStructureUseCase);
+    const result = await uc.run(cfg, { overwrite: true });
+
+    expect(result.errors).toHaveLength(0);
+    expect(result.copiedFiles).toHaveLength(1);
+    expect(result.overwrittenFiles).toHaveLength(0);
+  });
+
+  test("资源文件不存在时应记录错误", async () => {
+    const fs = new InMemoryFileSystem();
+
+    const cfg: Config = {
+      workspace: "/ws",
+      structure: [
+        {
+          type: "category",
+          name: "CategoryA",
+          children: [{ type: "material", name: "a", resource: "/src/nonexistent" }],
+        },
+      ],
+    };
+
+    const c = buildTestContainer(fs);
+    const uc = c.get<GenerateStructureUseCase>(DI_TYPES.GenerateStructureUseCase);
+    const result = await uc.run(cfg);
+
+    expect(result.errors.length).toBeGreaterThan(0);
+    expect(result.errors.some((e) => e.code === "FileOperationError")).toBe(true);
   });
 });
 
