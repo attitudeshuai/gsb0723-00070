@@ -21,5 +21,18 @@ export class NodeFsFileSystem implements IFileSystem {
   async copyFile(src: string, dst: string): Promise<void> {
     await fs.copyFile(src, dst);
   }
+
+  async isReadable(path: string): Promise<boolean> {
+    try {
+      await fs.access(path, fsConstants.R_OK);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async writeFile(path: string, content: string): Promise<void> {
+    await fs.writeFile(path, content, "utf-8");
+  }
 }
 

@@ -123,6 +123,7 @@ describe("GenerateStructureUseCase", () => {
 
     expect(result.errors).toHaveLength(0);
     expect(result.copiedFiles).toHaveLength(1);
+    expect(result.overwrittenFiles).toHaveLength(1);
     expect(fs.files.get(dstKey)).toBe("new-content");
   });
 });

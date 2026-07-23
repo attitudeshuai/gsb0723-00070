@@ -25,6 +25,21 @@ function makeWriter() {
   };
 }
 
+const sampleConfig: Config = {
+  workspace: "D:/workspace",
+  structure: [
+    {
+      type: "category",
+      name: "CategoryA",
+      children: [
+        { type: "category", name: "CategoryB", children: [] },
+        { type: "material", name: "c.tcad", resource: "d:/tcad/c.tcad" },
+        { type: "material", name: "c.pdf", resource: "d:/pdf/c.pdf" },
+      ],
+    },
+  ],
+};
+
 describe("CLI", () => {
   test("缺少 --config 应输出用法并退出 1", async () => {
     const stdout = makeWriter();
@@ -41,20 +56,7 @@ describe("CLI", () => {
     const stdout = makeWriter();
     const stderr = makeWriter();
     const out = await runCli(["node", "cli.js", "--config", "/cfg.json"], {
-      loader: new FakeLoader({
-        workspace: "D:/workspace",
-        structure: [
-          {
-            type: "category",
-            name: "CategoryA",
-            children: [
-              { type: "category", name: "CategoryB", children: [] },
-              { type: "material", name: "c.tcad", resource: "d:/tcad/c.tcad" },
-              { type: "material", name: "c.pdf", resource: "d:/pdf/c.pdf" },
-            ],
-          },
-        ],
-      }),
+      loader: new FakeLoader(sampleConfig),
       validator: new FakeValidator([]),
       stdout: stdout.writer,
       stderr: stderr.writer,
@@ -83,4 +85,3 @@ describe("CLI", () => {
     expect(stdout.get()).toContain("\"errors\"");
   });
 });
-
