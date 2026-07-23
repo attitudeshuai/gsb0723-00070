@@ -20,6 +20,7 @@ function emptyResult(): RunResult {
     createdDirectories: [],
     copiedFiles: [],
     skippedFiles: [],
+    overwrittenFiles: [],
     errors: [],
   };
 }
@@ -92,7 +93,8 @@ export class GenerateStructureUseCase implements IGenerateStructureUseCase {
     const dst = path.join(basePath, node.name);
 
     if (options.overwrite) {
-      await this.copyOne(src, dst, result);
+      const existed = await this.fileSystem.exists(dst);
+      await this.copyOne(src, dst, result, existed);
       return;
     }
     if (options.skipIfExists) {
@@ -102,17 +104,22 @@ export class GenerateStructureUseCase implements IGenerateStructureUseCase {
         return;
       }
     }
-    await this.copyOne(src, dst, result);
+    await this.copyOne(src, dst, result, false);
   }
 
   private async copyOne(
     src: string,
     dst: string,
     result: RunResult,
+    overwrote: boolean,
   ): Promise<void> {
     try {
       await this.fileSystem.copyFile(src, dst);
-      result.copiedFiles.push({ src, dst });
+      const entry = { src, dst };
+      result.copiedFiles.push(entry);
+      if (overwrote) {
+        result.overwrittenFiles.push(entry);
+      }
     } catch (e) {
       result.errors.push(this.toErrorRecord(dst, e, { src, dst }));
     }

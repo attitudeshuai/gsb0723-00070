@@ -2,5 +2,9 @@
 export * from "./domain/types";
 export * from "./application/runnerService";
 export * from "./application/generateStructureUseCase";
+export * from "./application/checkResourcesUseCase";
+export * from "./presentation/structureFormatter";
+export * from "./presentation/structureRenderer";
+export * from "./presentation/reporter";
 export * from "./di/container";
 
